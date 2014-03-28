@@ -1,6 +1,8 @@
 #-------------------------------------------------------------------------------
 # Name:        gisMetadata
 # Purpose:     A module associate with managing Argis 1.0 format metadata
+
+# Created By:  Bill Daigle 28Mar2014
 #-------------------------------------------------------------------------------
 
 import datetime
