@@ -15,7 +15,7 @@ import tempfile
 #test edit
 
 def backupMetadataToXml(datasetPath,xmlBackupPath = None):
-    '''Adds a process step to an existing metadata element tree
+    '''Saves dataset metadata to an xml file.
 
         Inputs:
             datasetPath(required): path to the dataset with metadata
@@ -32,7 +32,7 @@ def backupMetadataToXml(datasetPath,xmlBackupPath = None):
         return filepath
 
 def restoreMetadataFromBackup(xmlBackupPath,datasetPath):
-    '''puts metadata back into its original state
+    '''imports metadata from an xml file.
 
         Inputs:
             xmlBackupPath(required): path to the xml file
@@ -41,7 +41,7 @@ def restoreMetadataFromBackup(xmlBackupPath,datasetPath):
     '''
     arcpy.MetadataImporter_conversion(xmlBackupPath,datasetPath)
 
-def upgradeMetadataFormatToArcgis1_0(datasetPath, maintainFgdcTitle=True):
+def upgradeMetadataFormatToArcgis1_0(datasetPath, maintainFgdcTitle=True, maintainEsriDocID=True):
     '''updates an item's metadata to ArcGIC 1.0 format
 
         Inputs:
@@ -56,7 +56,12 @@ def upgradeMetadataFormatToArcgis1_0(datasetPath, maintainFgdcTitle=True):
         fgdcTitle = getTagText(mdo,'idinfo/citation/citeinfo/title')
         if fgdcTitle == None:
              maintainFgdcTitle = False
-
+             
+    #fetch the Esri document ID of the dataset if necessary
+    if maintainEsriDocID == True:
+        esriDocID = getTagText(mdo,'Esri/PublishedDocID')
+        if esriDocID == None:
+             maintainEsriDocID = False
 
     #upgrade the metadata if it hasn't been done yet
     if (getTagText(mdo,'Esri/ArcGISFormat') != '1.0'):
@@ -69,10 +74,25 @@ def upgradeMetadataFormatToArcgis1_0(datasetPath, maintainFgdcTitle=True):
     #delete the FGDC tags
     root = mdo.getroot()
     #list of all tags except 'eainfo' and 'spdoinfo' since ArcGIS 1.0 uses these
-    fgdcTags = ['idinfo','dataqual','spref','distinfo','metainfo','citeinfo','timeinfo','cntinfo']
+    fgdcTags = ['idinfo','dataqual','spref','distinfo','metainfo']
     for fgdcTag in fgdcTags:
         for child in root:
             if child.tag == fgdcTag:
+                root.remove(child)
+
+    #delete the Binary/Enclosure section that contains the old FGDC metadata.
+    #then delete the Binary section if there is no Thumbnail.
+    foundThumbnail = False
+    for child in root:
+        if child.tag == 'Binary':
+            for grandchild in child:
+                if grandchild.tag == 'Thumbnail':
+                    foundThumbnail = True
+                if grandchild.tag == 'Enclosure':
+                    child.remove(grandchild)
+    for child in root:
+        if child.tag == 'Binary':
+            if foundThumbnail == False:
                 root.remove(child)
 
     #import the updated element tree
@@ -90,6 +110,18 @@ def upgradeMetadataFormatToArcgis1_0(datasetPath, maintainFgdcTitle=True):
     if maintainFgdcTitle == True:
 
         updateTagText(syncedMdo,'dataIdInfo/idCitation/resTitle',fgdcTitle)
+
+    #update the Esri document ID if necessary
+    if maintainEsriDocID == True:
+        idTag = syncedMdo.find('mdFileID')
+        if idTag is None:
+            idTag = et.Element('mdFileID')
+            idTag.text = esriDocID
+            root = syncedMdo.getroot()
+            for metadataTag in root.iter('metadata'):
+                metadataTag.append(idTag)
+        else:
+            idTag.text = esriDocID
 
     #import the updated element tree
     import_from_ElementTree(syncedMdo,datasetPath)
