@@ -3,7 +3,6 @@
 # Purpose:     A module associate with managing Argis 1.0 format metadata
 
 # Created By:  Bill Daigle 28Mar2014
-#TESTING A CHANGE FOR THE PULL PROCESS - MAMESSER
 #-------------------------------------------------------------------------------
 
 import datetime
@@ -13,7 +12,6 @@ import xml.etree.ElementTree as et
 import shutil
 import tempfile
 
-#test edit
 
 def backupMetadataToXml(datasetPath,xmlBackupPath = None):
     '''Saves dataset metadata to an xml file.
@@ -57,7 +55,7 @@ def upgradeMetadataFormatToArcgis1_0(datasetPath, maintainFgdcTitle=True, mainta
         fgdcTitle = getTagText(mdo,'idinfo/citation/citeinfo/title')
         if fgdcTitle == None:
              maintainFgdcTitle = False
-             
+
     #fetch the Esri document ID of the dataset if necessary
     if maintainEsriDocID == True:
         esriDocID = getTagText(mdo,'Esri/PublishedDocID')
